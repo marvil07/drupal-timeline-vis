@@ -1,0 +1,73 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Drupal Timeline</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+  <script type="text/javascript" src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+  <link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <h1>Drupal Timeline</h1>
+    <div id="visualization"></div>
+    <div id="entries"></div>
+    <div id="loading">Loading...</div>
+    <div id="info">
+        <h2>About</h2>
+        <p>This is a visualization for [Moshe's Drupal timeline](https://github.com/weitzman/drupal-timeline) using [vis-timeline](https://github.com/visjs/vis-timeline).</p>
+    </div>
+    <script type="text/javascript">
+        // Truly dumb implementation of markdown link parsing.
+        function markdownLinks(input) {
+            let re = /\[([\w\s]+)\]\((\S+)\)/g;
+            let replace = '<a href="$2">$1<\/a>';
+            return input.replaceAll(re, replace);
+        };
+        $.ajax({
+            url: './drupal-timeline.json',
+            success: function (data) {
+                document.getElementById('loading').style.display = 'none';
+                var container = document.getElementById('visualization');
+                var entries = document.getElementById('entries');
+                // Prepare the data for vis.
+                let vis_data = [];
+                for (let i = 0; i < data.length; i++) {
+                    html_item = '';
+                    description = markdownLinks(data[i].description);
+                    item = {};
+                    item.id = i;
+                    item.content = data[i].title;
+                    item.content = '<a href="#' + i + '">' + item.content + '<\/a>';
+                    item.title = description;
+                    item.start = data[i].date;
+                    vis_data[i] = item;
+                    html_item = '<a id="' + i + '"><h2>' + data[i].title + '<\/h2><\/a>';
+                    date = new Date(data[i].date);
+                    date_str = new Intl.DateTimeFormat([], {dateStyle: "medium"}).format(date);
+                    if ('username' in data[i]) {
+                        html_item += '<p>Led by <a href="https://www.drupal.org/u/"' + data[i].username + '">' + data[i].username + '<\/a> around ' + date_str + '.<\/p>';
+                    }
+                    else {
+                        html_item += '<p>Around ' + date_str + '.<\/p>';
+                    }
+                    html_item += '<p>' + description + '<\/p>';
+                    entries.innerHTML += html_item;
+                }
+                var items = new vis.DataSet(vis_data);
+                var options = {
+                    start: '2001-01-01',
+                    end: '2004-01-01',
+                    tooltip: {
+                        overflowMethod: 'cap',
+                    },
+                };
+                var timeline = new vis.Timeline(container, items, options);
+            },
+            error: function (err) {
+                console.log('Error', err);
+                alert('Failed to load ./drupal-timeline.json.');
+            }
+        });
+    </script>
+</body>
+</html>
